@@ -1,0 +1,11 @@
+streamlit
+numpy
+pandas
+yfinance
+seaborn
+matplotlib
+datetime
+seaborn
+sklearn
+datetime
+warnings
