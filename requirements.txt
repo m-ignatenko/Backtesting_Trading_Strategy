@@ -4,8 +4,6 @@ pandas
 yfinance
 seaborn
 matplotlib
-datetime
 seaborn
 scikit-learn
 datetime
-warnings
