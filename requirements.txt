@@ -6,6 +6,6 @@ seaborn
 matplotlib
 datetime
 seaborn
-sklearn
+scikit-learn
 datetime
 warnings
