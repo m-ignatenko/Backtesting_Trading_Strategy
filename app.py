@@ -11,7 +11,9 @@ st.set_page_config(
     )
 st.sidebar.header("Model parameters")
 type = st.sidebar.selectbox('Model selection',("Logistic Regression","Gradient Boosting"))
-n_est = st.sidebar.number_input("Enter number of estimators(for boosting)", min_value=1, step=10, value=1000, format="%d")
+if (type == 'Gradient Boosting'):
+    st.sidebar.text('Might take longer')
+n_est = st.sidebar.number_input("Enter number of estimators(for boosting)", min_value=1, step=1, value=100, format="%d")
 
 b_type = st.sidebar.selectbox('Base model (for boosting)',("Decision Tree","Random Forest"))
 
