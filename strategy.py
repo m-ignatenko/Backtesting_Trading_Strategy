@@ -2,6 +2,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from sklearn import linear_model as lm
+from lightgbm import LGBMClassifier
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import datetime as dt
@@ -16,6 +17,7 @@ class Strategy(object):
         self.test_end = test_end
         self.transaction_cost = transaction_cost
         self.capital = capital
+        self.model =None
         self.prepare_data()
     def prepare_data(self):
         df_train= yf.download(self.ticker,start=self.train_start, end=self.train_end)['Close']
@@ -26,7 +28,6 @@ class Strategy(object):
         df_test['return'] = np.log(df_test['price']/df_test['price'].shift(1))
         lags =5
         cols = []
-
         for i in range(1, lags+1):
             col = f'lag_{i}'
             df_train[col] = df_train['return'].shift(i)
@@ -41,19 +42,34 @@ class Strategy(object):
         df_test.dropna(inplace=True)
         self.df_train = df_train
         self.df_test = df_test
-    def model_selection(self, type = 'logregression'):
-        if type == 'logregression': 
+    def model_selection(self, type = 'Logistic Regression',n_est=100,b_type = "Decision tree"):
+        if type == 'Logistic Regression': 
             self.model = lm.LogisticRegression(C=1e7, solver='lbfgs', multi_class='auto',max_iter=1000)
-            self.model.fit(self.df_train[self.cols], np.sign(self.df_train['return']))
-            self.df_train['prediction']= self.model.predict(self.df_train[self.cols])
-            self.df_test['prediction']= self.model.predict(self.df_test[self.cols])
-            self.df_train['strategy'] = self.df_train['prediction'] *self.df_train['return']
-            self.df_test['strategy'] = self.df_test['prediction'] *self.df_test['return']
-            self.df_train.dropna(inplace=True)
-            self.df_test.dropna(inplace=True)
+        elif type == "Gradient Boosting":
+            base_models = {"Decision Tree": 'gbdt', "Random Forest":"rf"}
+            boosting_type=base_models[b_type]
+            if boosting_type == 'gbdt':
+                self.model = LGBMClassifier(
+                boosting_type=boosting_type,
+                n_estimators=n_est,
+                n_jobs=-1)
+            else:
+                self.model = LGBMClassifier(
+                boosting_type=boosting_type,
+                bagging_freq= 1,
+                bagging_fraction=0.8,
+                n_estimators=n_est,
+                n_jobs=-1)
+        self.model.fit(self.df_train[self.cols], np.sign(self.df_train['return']))
+        self.df_train['prediction']= self.model.predict(self.df_train[self.cols])
+        self.df_test['prediction']= self.model.predict(self.df_test[self.cols])
+        self.df_train['strategy'] = self.df_train['prediction'] *self.df_train['return']
+        self.df_test['strategy'] = self.df_test['prediction'] *self.df_test['return']
+        self.df_train.dropna(inplace=True)
+        self.df_test.dropna(inplace=True)
 
-    def estimation(self):
-        self.model_selection()
+    def estimation(self,type, n_est,b_type):
+        self.model_selection(type,n_est,b_type)
         # ON TRAIN DATA
         sns.set_theme(
         style="darkgrid",
@@ -98,6 +114,6 @@ class Strategy(object):
         fig.subplots_adjust(top=0.85)
         ax2.legend(loc=0)
         plt.show()
-    def run(self):
+    def run(self,type, n_est,b_type):
         self.prepare_data()
-        self.estimation()
+        self.estimation(type, n_est,b_type)
