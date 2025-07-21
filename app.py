@@ -5,7 +5,7 @@ import streamlit as st
 warnings.filterwarnings("ignore")
 import matplotlib.pyplot as plt
 st.set_page_config(
-        page_title="Markowitz Portfolio Model",
+        page_title="Backtesting Trading Strategy",
         page_icon="chart_with_upwards_trend",
         layout="wide",
     )
