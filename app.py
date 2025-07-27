@@ -6,16 +6,23 @@ import streamlit as st
 warnings.filterwarnings("ignore")
 import matplotlib.pyplot as plt
 st.set_page_config(
-        page_title="Markowitz Portfolio Model",
+        page_title="Backtesting Trading Strategy",
         page_icon="chart_with_upwards_trend",
         layout="wide",
     )
 st.sidebar.header("Model parameters")
+<<<<<<< HEAD
 general = st.sidebar.selectbox('Model selection',("ML based", "Technical Indicators"))
 if general == 'ML based':
     type = st.sidebar.selectbox('Model selection',("Logistic Regression","Gradient Boosting"))
     n_est = st.sidebar.number_input("Enter number of estimators(for boosting)", min_value=1, step=1, value=10, format="%d")
     b_type = st.sidebar.selectbox('Base model (for boosting)',("Decision Tree","Random Forest"))
+=======
+type = st.sidebar.selectbox('Model selection',("Logistic Regression","Gradient Boosting"))
+if (type == 'Gradient Boosting'):
+    st.sidebar.text('Might take longer')
+n_est = st.sidebar.number_input("Enter number of estimators(for boosting)", min_value=1, step=1, value=10, format="%d")
+>>>>>>> 8745b99b8eb7f24d244f028d7f3373344468d110
 
     if (type == 'Gradient Boosting'):
         st.sidebar.text('Might take longer')
@@ -52,6 +59,7 @@ with param_col:
         t1 = st.text_input("Start Date", value='2020-01-01')
         t2 = st.text_input("End Date", value='2024-01-01')
 with main_col:
+<<<<<<< HEAD
     if general == "ML based":
         strat = Strategy(ticker,t1,t2,t3,t4,tc, capital)
         strat.run(type, n_est, b_type)
@@ -80,3 +88,10 @@ with main_col:
         st.info(f"Profit by holding : {hold_profit:.4f} \n \n Buy & Hold return [%]: {(bt.data['price'].iloc[-1]-bt.data['price'].iloc[0])/bt.data['price'].iloc[0]*100:.4f}")
         st.header("Trade journal")
         st.text(bt.msg)
+=======
+    strat = Strategy(ticker,t1,t2,t3,t4,tc, capital)
+    strat.run(type, n_est, b_type)
+    st.pyplot(plt)
+    st.info(f"Strategy total return: {strat.df_test['strategy'].cumsum().apply(np.exp)[-1]:.4f} \n\n Profit by using strategy \
+            : {strat.capital*strat.df_test['strategy'].cumsum().apply(np.exp)[-1] - strat.transaction_cost* sum(strat.df_test['prediction'].diff().fillna(0) !=0):.4f} by treating each transaction cost as {strat.transaction_cost} (total number of trades: {sum(strat.df_test['prediction'].diff().fillna(0) !=0)}) \n\n Profit by holding: {strat.capital*strat.df_test['return'].cumsum().apply(np.exp)[-1]:.4f}")
+>>>>>>> 8745b99b8eb7f24d244f028d7f3373344468d110
