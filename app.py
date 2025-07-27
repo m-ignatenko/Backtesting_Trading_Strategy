@@ -1,4 +1,5 @@
 from strategy import Strategy
+from Technical import *
 import warnings
 import numpy as np
 import streamlit as st
@@ -10,12 +11,24 @@ st.set_page_config(
         layout="wide",
     )
 st.sidebar.header("Model parameters")
-type = st.sidebar.selectbox('Model selection',("Logistic Regression","Gradient Boosting"))
-if (type == 'Gradient Boosting'):
-    st.sidebar.text('Might take longer')
-n_est = st.sidebar.number_input("Enter number of estimators(for boosting)", min_value=1, step=1, value=100, format="%d")
+general = st.sidebar.selectbox('Model selection',("ML based", "Technical Indicators"))
+if general == 'ML based':
+    type = st.sidebar.selectbox('Model selection',("Logistic Regression","Gradient Boosting"))
+    n_est = st.sidebar.number_input("Enter number of estimators(for boosting)", min_value=1, step=1, value=10, format="%d")
+    b_type = st.sidebar.selectbox('Base model (for boosting)',("Decision Tree","Random Forest"))
 
-b_type = st.sidebar.selectbox('Base model (for boosting)',("Decision Tree","Random Forest"))
+    if (type == 'Gradient Boosting'):
+        st.sidebar.text('Might take longer')
+elif general =='Technical Indicators':
+    type = st.sidebar.selectbox('Model selection',("Moving Averages","Momentum","Mean Reversed"))    
+    if type =='Moving Averages':
+        ma1 = st.sidebar.number_input("Length of 1st Moving average", value=42)
+        ma2 = st.sidebar.number_input("Length of 2nd Moving average", value=252)
+    elif type == 'Momentum':
+        ma = st.sidebar.number_input("Length of Moving average", value=50)
+    elif type == "Mean Reversed":
+        ma = st.sidebar.number_input("Length of Moving average", value=50)
+        th = st.sidebar.number_input("Value of threshold", value=1.0,step=0.1)
 
 main_col, param_col = st.columns([3, 2])
 with param_col:
@@ -28,15 +41,42 @@ with param_col:
 
     st.header("Asset Parameters")
     ticker = st.text_input("Ticker", value="AAPL")
-    tc = st.number_input("Transaction cost", value=0.0)
     capital = st.number_input("Capital", value=10_000.0)
-    t1 = st.text_input("Training Start Date", value='2020-01-01')
-    t2 = st.text_input("Training End Date", value='2024-01-01')
-    t3 = st.text_input("Test Start Date", value='2024-01-01')
-    t4 = st.text_input("Test End Date", value='2025-06-01')
+    tc = st.number_input("Transaction cost", value=0.0)
+    if general == 'ML based':
+        t1 = st.text_input("Training Start Date", value='2020-01-01')
+        t2 = st.text_input("Training End Date", value='2024-01-01')
+        t3 = st.text_input("Test Start Date", value='2024-01-01')
+        t4 = st.text_input("Test End Date", value='2025-06-01')
+    elif general =='Technical Indicators':
+        t1 = st.text_input("Start Date", value='2020-01-01')
+        t2 = st.text_input("End Date", value='2024-01-01')
 with main_col:
-    strat = Strategy(ticker,t1,t2,t3,t4,tc, capital)
-    strat.run(type, n_est, b_type)
-    st.pyplot(plt)
-    st.info(f"Strategy total return: {strat.df_test['strategy'].cumsum().apply(np.exp)[-1]:.4f} \n\n Profit by using strategy \
-            : {strat.capital*strat.df_test['strategy'].cumsum().apply(np.exp)[-1] - strat.transaction_cost* sum(strat.df_test['prediction'].diff().fillna(0) !=0):.4f} by treating each transaction cost as {strat.transaction_cost} (total number of trades: {sum(strat.df_test['prediction'].diff().fillna(0) !=0)}) \n\n Profit by holding: {strat.capital*strat.df_test['return'].cumsum().apply(np.exp)[-1]:.4f}")
+    if general == "ML based":
+        strat = Strategy(ticker,t1,t2,t3,t4,tc, capital)
+        strat.run(type, n_est, b_type)
+        st.pyplot(plt)
+        st.info(f" \n\n Profit by using strategy \
+                : {strat.capital*strat.df_test['strategy'].cumsum().apply(np.exp)[-1] - strat.transaction_cost* sum(strat.df_test['prediction'].diff().fillna(0) !=0):.4f} \
+                      by treating each transaction cost as {strat.transaction_cost} (total number of trades: {sum(strat.df_test['prediction'].diff().fillna(0) !=0)})\n\nStrategy total return [%]: {strat.df_test['strategy'].cumsum().apply(np.exp)[-1]:.4f}")
+        st.info(f"Profit by holding: \
+                      {capital*(1+(
+                          (strat.df_test['price'].iloc[-1] - strat.df_test['price'].iloc[0])/strat.df_test['price'][0])):.4f} \n\n Buy & Hold return [%]: {(strat.df_test['price'][-1] - strat.df_test['price'][0])/strat.df_test['price'][0]:.4f}")
+    elif general == 'Technical Indicators':
+        bt = Backtest(ticker,t1,t2,capital,tc,0,True)
+        bt.get_data()
+        n = bt.data.shape[0]
+        if type == 'Moving Averages':
+            bt.sma_crossover(ma1, ma2)
+        elif type == 'Momentum':
+            bt.momentum(ma)
+        elif type =='Mean Reversed':
+            bt.mean_reversed(ma,th)
+        bt.plot()
+        st.pyplot(plt)
+        st.info(f"Profit by using strategy : {bt.get_wealth(n-1):.4f} by treating each transaction cost as {tc} (total number of trades: {bt.trades})\
+                 \n\n Strategy total return [%]: { 100*(bt.get_wealth(n-1) - capital) /capital:.4f}")
+        hold_profit = capital * (1 + (bt.data['price'].iloc[-1]-bt.data['price'].iloc[0])/bt.data['price'].iloc[0])
+        st.info(f"Profit by holding : {hold_profit:.4f} \n \n Buy & Hold return [%]: {(bt.data['price'].iloc[-1]-bt.data['price'].iloc[0])/bt.data['price'].iloc[0]*100:.4f}")
+        st.header("Trade journal")
+        st.text(bt.msg)
